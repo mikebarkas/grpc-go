@@ -11,6 +11,8 @@ import (
 
 	"github.com/mikebarkas/grpc-go/greet/greetpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type server struct{}
@@ -84,8 +86,29 @@ func (*server) GreetEveryone(stream greetpb.GreetService_GreetEveryoneServer) er
 	}
 }
 
+// Unary request and response with a context deadline.
+func (*server) GreetDeadline(ctx context.Context, req *greetpb.GreetDeadlineRequest) (*greetpb.GreetDeadlineResponse, error) {
+	fmt.Println("Greet deadline func was invoked")
+
+	// Loop and sleep checking the client context.
+	for i := 0; i < 3; i++ {
+		if ctx.Err() == context.Canceled {
+			// Client cancelled request
+			fmt.Println("Client cancelled request")
+			// Return a status error the client can see
+			return nil, status.Error(codes.Canceled, "Client cancelled the request")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	res := &greetpb.GreetDeadlineResponse{
+		Result: "Hello " + req.GetGreeting().GetFirstName(),
+	}
+	return res, nil
+}
+
 func main() {
-	fmt.Println("Server main")
+	fmt.Println("Server started")
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
