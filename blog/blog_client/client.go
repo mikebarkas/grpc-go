@@ -24,12 +24,20 @@ func main() {
 
 	blog := &blogpb.Blog{
 		AuthorId: "mike",
-		Title:    "Third Blog",
-		Content:  "Content of my third blog post",
+		Title:    "Fourth Blog",
+		Content:  "Content of my fourth blog post",
 	}
 	res, err := c.CreateBlog(context.Background(), &blogpb.CreateBlogRequest{Blog: blog})
 	if err != nil {
 		log.Fatalf("error")
 	}
 	fmt.Printf("Blog request sent %v \n", res)
+
+	blogID := res.GetBlog().GetId()
+	readReq := &blogpb.ReadBlogRequest{BlogId: blogID}
+	readRes, readErr := c.ReadBlog(context.Background(), readReq)
+	if readErr != nil {
+		log.Fatalf("error")
+	}
+	fmt.Printf("Blog read response: %v", readRes)
 }
