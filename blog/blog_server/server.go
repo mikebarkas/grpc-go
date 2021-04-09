@@ -30,6 +30,15 @@ var collection *mongo.Collection
 
 type server struct{}
 
+func dataToBlogPb(data *blogItem) *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       data.ID.Hex(),
+		AuthorId: data.AuthorID,
+		Content:  data.Content,
+		Title:    data.Title,
+	}
+}
+
 func (*server) CreateBlog(ctx context.Context, req *blogpb.CreateBlogRequest) (*blogpb.CreateBlogResponse, error) {
 	blog := req.GetBlog()
 
@@ -81,12 +90,35 @@ func (*server) ReadBlog(ctx context.Context, req *blogpb.ReadBlogRequest) (*blog
 	// 	fmt.Sprintln("error findone")
 	// }
 	return &blogpb.ReadBlogResponse{
-		Blog: &blogpb.Blog{
-			Id:       data.ID.Hex(),
-			AuthorId: data.AuthorID,
-			Content:  data.Content,
-			Title:    data.Title,
-		},
+		Blog: dataToBlogPb(data),
+	}, nil
+}
+
+func (*server) UpdateBlog(ctx context.Context, req *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
+	blog := req.GetBlog()
+	oid, err := primitive.ObjectIDFromHex(req.Blog.GetId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse requested ID"),
+		)
+	}
+	data := &blogItem{}
+	collection.FindOne(context.Background(), bson.M{"_id": oid}).Decode(&data)
+
+	data.AuthorID = blog.AuthorId
+	data.Title = blog.Title
+	data.Content = blog.Content
+
+	_, upErr := collection.ReplaceOne(context.Background(), bson.M{"_id": oid}, data)
+	if upErr != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse requested ID"),
+		)
+	}
+	return &blogpb.UpdateBlogResponse{
+		Blog: dataToBlogPb(data),
 	}, nil
 }
 
